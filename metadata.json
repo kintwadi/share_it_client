@@ -1,0 +1,5 @@
+{
+  "name": "NearShare",
+  "description": "A hyper-local trust-based platform for neighbors to borrow tools and exchange skills within walking distance.",
+  "requestFramePermissions": []
+}

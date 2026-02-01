@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "NearShare Mock API Schema",
+  "description": "Schema definitions for the NearShare platform mock data structures.",
+  "type": "object",
+  "definitions": {
+    "User": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "avatarUrl": { "type": "string", "format": "uri" },
+        "trustScore": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "vouchCount": { "type": "integer", "minimum": 0 },
+        "location": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          },
+          "required": ["lat", "lng"]
+        },
+        "joinedDate": { "type": "string", "format": "date" }
+      },
+      "required": ["id", "name", "trustScore", "location"]
+    },
+    "Listing": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "type": { "type": "string", "enum": ["GOODS", "SKILL"] },
+        "category": { "type": "string" },
+        "imageUrl": { "type": "string", "format": "uri" },
+        "distanceMiles": { "type": "number" },
+        "status": { "type": "string", "enum": ["AVAILABLE", "BORROWED", "SCHEDULED"] },
+        "location": {
+          "type": "object",
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" }
+          },
+          "required": ["x", "y"]
+        }
+      },
+      "required": ["id", "ownerId", "title", "type", "status"]
+    },
+    "Message": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "isRead": { "type": "boolean" }
+      },
+      "required": ["id", "senderId", "receiverId", "content", "timestamp"]
+    }
+  }
+}
