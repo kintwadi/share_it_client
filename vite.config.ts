@@ -20,6 +20,20 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
+      },
+      build: {
+        outDir: 'build',
+        chunkSizeWarningLimit: 600,
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              vendor: ['react', 'react-dom'],
+              charts: ['recharts'],
+              stripe: ['@stripe/stripe-js', '@stripe/react-stripe-js'],
+              websocket: ['@stomp/stompjs', 'sockjs-client']
+            }
+          }
+        }
       }
     };
 });
