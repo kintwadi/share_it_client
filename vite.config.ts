@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
         global: 'window',
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        __API_BASE__: JSON.stringify(env.__API_BASE__ || 'http://localhost:8081')
+        __API_BASE__: JSON.stringify(env.__API_BASE__ || 'https://share-it-k0ky.onrender.com')
       },
       resolve: {
         alias: {
