@@ -2,7 +2,7 @@
 import { MOCK_USERS } from '../data/mockData';
 import { Listing, User, Message, AvailabilityStatus, BorrowHistoryItem, Review, UserStatus, VerificationStatus } from '../types';
 
-export const API_BASE = (window as any).__API_BASE__ || 'https://share-it-k0ky.onrender.com';
+export const API_BASE = (window as any).__API_BASE__ || 'http://localhost:8081';
 const STORAGE_USER_ID = 'nearshare_current_user_id';
 const TOKEN_KEY = 'nearshare_token';
 
@@ -116,6 +116,28 @@ export const mockApi = {
 
   logout: async (): Promise<void> => {
     clearSession();
+  },
+
+  // Password Recovery Methods
+  requestPasswordReset: async (email: string): Promise<{ message: string }> => {
+    return await authFetch('/api/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    });
+  },
+
+  verifyResetCode: async (email: string, code: string): Promise<{ valid: boolean; token?: string }> => {
+    return await authFetch('/api/auth/verify-reset-code', {
+      method: 'POST',
+      body: JSON.stringify({ email, code })
+    });
+  },
+
+  resetPassword: async (token: string, newPassword: string): Promise<{ message: string }> => {
+    return await authFetch('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword })
+    });
   },
 
   getCurrentUser: async (): Promise<User | null> => {

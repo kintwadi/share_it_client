@@ -1,10 +1,11 @@
 
 import React, { useState } from 'react';
-import { Shield, Mail, Lock, User as UserIcon, ArrowRight, UserCheck, Sparkles } from 'lucide-react';
+import { Shield, Mail, Lock, User as UserIcon, ArrowRight, UserCheck, Sparkles, Key } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { mockApi } from '../services/mockApi';
 import { User } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
+import { PasswordRecovery } from '../components/PasswordRecovery';
 
 interface ConnectProps {
   onLogin?: (user: User) => void;
@@ -18,6 +19,7 @@ export const Connect: React.FC<ConnectProps> = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [mfaCode, setMfaCode] = useState('');
   const [showMfaInput, setShowMfaInput] = useState(false);
+  const [showPasswordRecovery, setShowPasswordRecovery] = useState(false);
   const [tempToken, setTempToken] = useState<string | null>(null);
   const [allowAdminToggle, setAllowAdminToggle] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -248,6 +250,15 @@ export const Connect: React.FC<ConnectProps> = ({ onLogin }) => {
                    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-brand-600 transition-colors" size={18} />
                    <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-brand-500 focus:border-transparent focus:outline-none transition-all" placeholder="••••••••" required />
                </div>
+               {isLogin && (
+                 <button
+                   type="button"
+                   onClick={() => setShowPasswordRecovery(true)}
+                   className="text-sm text-brand-600 hover:text-brand-700 mt-2 ml-1"
+                 >
+                   Forgot Password?
+                 </button>
+               )}
             </div>
 
             <button type="submit" disabled={isLoading} className="w-full bg-gray-900 text-white py-3.5 rounded-xl font-bold hover:bg-gray-800 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center justify-center disabled:opacity-70 disabled:transform-none">
@@ -267,6 +278,19 @@ export const Connect: React.FC<ConnectProps> = ({ onLogin }) => {
           </div>
         </div>
       </div>
+
+      {/* Password Recovery Modal */}
+      {showPasswordRecovery && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
+          <PasswordRecovery 
+            onBackToLogin={() => setShowPasswordRecovery(false)}
+            onRecoverySuccess={() => {
+              setShowPasswordRecovery(false);
+              setError('Password reset successful! Please login with your new password.');
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };
