@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { User, UserRole, Listing, AvailabilityStatus, ListingType, BorrowHistoryItem, Review, UserStatus, VerificationStatus } from '../types';
-import { Plus, Wand2, Loader2, Package, Users, ShieldAlert, Search, Clock, MapPin, Calendar, Shield, Trash2, Edit2, Eye, EyeOff, X, Upload, Image as ImageIcon, BadgeCheck, ChevronRight, BellRing, Check, X as XIcon, MessageSquare, Zap, Ban, RefreshCcw, Mail, Phone, FileCheck, DollarSign, Gift, History, Star, AlertTriangle, CheckCircle2, Lock, Settings } from 'lucide-react';
+import { User, UserRole, Listing, AvailabilityStatus, ListingType, BorrowHistoryItem, Review, UserStatus, VerificationStatus, Report } from '../types';
+import { Plus, Wand2, Loader2, Package, Users, ShieldAlert, Search, Clock, MapPin, Calendar, Shield, Trash2, Edit2, Eye, EyeOff, X, Upload, Image as ImageIcon, BadgeCheck, ChevronRight, BellRing, Check, X as XIcon, MessageSquare, Zap, Ban, RefreshCcw, Mail, Phone, FileCheck, DollarSign, Gift, History, Star, AlertTriangle, CheckCircle2, Lock, Settings, Flag } from 'lucide-react';
 import { generateDescription } from '../services/geminiService';
 import { mockApi, uploadApi } from '../services/mockApi';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -46,6 +46,31 @@ const RecommendationCard: React.FC<{ title: string, distance: string, icon: stri
     </div>
   </div>
 );
+
+const ConfirmationModal = ({ title, message, onConfirm, onCancel, confirmText = "Confirm", cancelText = "Cancel", isDanger = false }: { title: string, message: string, onConfirm: () => void, onCancel: () => void, confirmText?: string, cancelText?: string, isDanger?: boolean }) => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4">
+      <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl p-6 text-center">
+        <h3 className="font-bold text-lg text-gray-900 mb-2">{title}</h3>
+        <p className="text-gray-500 text-sm mb-6">{message}</p>
+        <div className="flex gap-3">
+          <button 
+            onClick={onCancel}
+            className="flex-1 py-2.5 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors text-sm"
+          >
+            {cancelText}
+          </button>
+          <button 
+            onClick={onConfirm}
+            className={`flex-1 py-2.5 text-white font-bold rounded-xl transition-colors text-sm shadow-md ${isDanger ? 'bg-red-600 hover:bg-red-700' : 'bg-brand-600 hover:bg-brand-700'}`}
+          >
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const VerificationRequestModal = ({ currentUser, onClose, onSave }: { currentUser: User, onClose: () => void, onSave: (data: { address: string, phone: string }) => void }) => {
     const [address, setAddress] = useState(currentUser.address || '');
@@ -747,12 +772,11 @@ const AdminUserDetailModal = ({ user, onClose, onToggleStatus, onDelete, onAppro
   );
 };
 
-const AdminListingDetailModal = ({ listing, onClose, onToggleBlock, onDelete }: { listing: Listing, onClose: () => void, onToggleBlock: () => void, onDelete: () => void }) => {
+const AdminListingDetailModal = ({ listing, reports = [], onClose, onToggleBlock, onDelete, onDismissAll }: { listing: Listing, reports?: Report[], onClose: () => void, onToggleBlock: () => void, onDelete: () => void, onDismissAll?: () => void }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
        <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-          {/* ... existing modal structure ... */}
-          <div className="relative h-56 bg-gray-100">
+          <div className="relative h-56 bg-gray-100 shrink-0">
              <img src={listing.imageUrl} className="w-full h-full object-cover" />
              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
              <button onClick={onClose} className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-black/40 text-white rounded-full backdrop-blur-md transition-colors border border-white/20">
@@ -767,8 +791,78 @@ const AdminListingDetailModal = ({ listing, onClose, onToggleBlock, onDelete }: 
                 </div>
              </div>
           </div>
-          {/* ... content ... */}
-          <div className="p-6 border-t border-gray-100 bg-gray-50 flex gap-3">
+
+          <div className="flex-1 overflow-y-auto p-6">
+             {reports && reports.length > 0 && (
+                <div className="mb-6 space-y-3">
+                    <div className="flex items-center justify-between">
+                        <h4 className="font-bold text-red-900 text-sm flex items-center gap-2">
+                            <Flag className="text-red-500" size={16} />
+                            {reports.length} Active Report{reports.length > 1 ? 's' : ''}
+                        </h4>
+                        {onDismissAll && (
+                            <button 
+                                onClick={onDismissAll}
+                                className="text-xs font-bold text-red-600 hover:text-red-800 hover:underline"
+                            >
+                                Dismiss All
+                            </button>
+                        )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                        {reports.map((report, idx) => (
+                            <div key={idx} className="p-4 bg-red-50 border border-red-100 rounded-xl">
+                                <div className="flex items-start gap-3">
+                                    <div className="flex-1">
+                                        <h4 className="font-bold text-red-900 text-sm mb-1">{report.reason}</h4>
+                                        <p className="text-red-700 text-sm">{report.details}</p>
+                                        <div className="flex items-center gap-2 mt-2 text-xs text-red-600/80">
+                                            <span>Reported by {report.reporter?.name || 'Unknown'}</span>
+                                            <span>•</span>
+                                            <span>{new Date(report.timestamp).toLocaleDateString()}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+             )}
+
+             <div className="space-y-4">
+                <div>
+                   <h4 className="font-bold text-gray-900 text-sm mb-2 uppercase tracking-wide opacity-70">Description</h4>
+                   <p className="text-gray-600 text-sm leading-relaxed">{listing.description}</p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                   <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                      <div className="text-xs text-gray-400 font-bold uppercase mb-1">Status</div>
+                      <div className={`text-sm font-bold ${
+                         listing.status === AvailabilityStatus.AVAILABLE ? 'text-emerald-600' :
+                         listing.status === AvailabilityStatus.BLOCKED ? 'text-red-600' : 'text-amber-600'
+                      }`}>{listing.status}</div>
+                   </div>
+                   <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                      <div className="text-xs text-gray-400 font-bold uppercase mb-1">Price / Day</div>
+                      <div className="text-sm font-bold text-gray-900">${listing.hourlyRate}</div>
+                   </div>
+                </div>
+
+                <div className="p-4 rounded-xl border border-gray-100 flex items-center gap-4">
+                   <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden shrink-0">
+                      <img src={listing.owner?.avatarUrl || `https://ui-avatars.com/api/?name=${listing.ownerId}`} className="w-full h-full object-cover" />
+                   </div>
+                   <div>
+                      <div className="text-xs text-gray-400 font-bold uppercase">Owner</div>
+                      <div className="font-bold text-gray-900 text-sm">{listing.owner?.name || listing.ownerId}</div>
+                   </div>
+                </div>
+             </div>
+          </div>
+
+          <div className="p-6 border-t border-gray-100 bg-gray-50 flex gap-3 shrink-0">
              <button 
                 onClick={onToggleBlock}
                 className={`flex-1 py-3 rounded-xl font-bold text-sm transition-colors border flex items-center justify-center gap-2 shadow-sm ${
@@ -1224,9 +1318,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onUpdateUs
 
 // --- Admin View ---
 const AdminDashboard = ({ user, onLogout }: { user: User, onLogout: () => void }) => {
-  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'USERS' | 'LISTINGS'>('OVERVIEW');
+  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'USERS' | 'LISTINGS' | 'REPORTS'>('OVERVIEW');
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [allListings, setAllListings] = useState<Listing[]>([]);
+  const [allReports, setAllReports] = useState<Report[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const { t, formatPrice } = useLanguage();
@@ -1234,6 +1329,9 @@ const AdminDashboard = ({ user, onLogout }: { user: User, onLogout: () => void }
   // Detail Modal States
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const [selectedReports, setSelectedReports] = useState<Report[]>([]);
+  const [reportsToDismiss, setReportsToDismiss] = useState<string[]>([]);
+  const [deleteListingId, setDeleteListingId] = useState<string | null>(null);
 
   useEffect(() => {
      loadData();
@@ -1241,12 +1339,14 @@ const AdminDashboard = ({ user, onLogout }: { user: User, onLogout: () => void }
 
   const loadData = async () => {
      setLoading(true);
-     const [users, listings] = await Promise.all([
+     const [users, listings, reports] = await Promise.all([
         mockApi.getAllUsers(),
-        mockApi.getListings()
+        mockApi.getListings(),
+        mockApi.getReports()
      ]);
      setAllUsers(users);
      setAllListings(listings);
+     setAllReports(reports);
      setLoading(false);
   };
 
@@ -1271,9 +1371,14 @@ const AdminDashboard = ({ user, onLogout }: { user: User, onLogout: () => void }
      loadData();
   };
 
-  const handleDeleteListing = async (listingId: string) => {
-      if(confirm('Are you sure you want to delete this listing?')) {
-        await mockApi.deleteListing(listingId);
+  const handleDeleteListing = (listingId: string) => {
+      setDeleteListingId(listingId);
+  };
+
+  const confirmDeleteListing = async () => {
+      if (deleteListingId) {
+        await mockApi.deleteListing(deleteListingId);
+        setDeleteListingId(null);
         setSelectedListing(null);
         loadData();
       }
@@ -1293,8 +1398,35 @@ const AdminDashboard = ({ user, onLogout }: { user: User, onLogout: () => void }
       }
   };
 
+  const handleDismissReports = (reportIds: string[]) => {
+      setReportsToDismiss(reportIds);
+  };
+
+  const confirmDismissReports = async () => {
+      if (reportsToDismiss.length > 0) {
+          await Promise.all(reportsToDismiss.map(id => mockApi.dismissReport(id)));
+          setReportsToDismiss([]);
+          if (selectedReports.length > 0) {
+             setSelectedListing(null);
+             setSelectedReports([]);
+          }
+          loadData();
+      }
+  };
+
   const filteredUsers = allUsers.filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase()) || u.id.toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredListings = allListings.filter(l => l.title.toLowerCase().includes(searchQuery.toLowerCase()) || l.owner?.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredReports = allReports.filter(r => r.listing?.title.toLowerCase().includes(searchQuery.toLowerCase()) || r.reporter?.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+  const groupedReports = useMemo(() => {
+    const groups: Record<string, Report[]> = {};
+    filteredReports.forEach(r => {
+      const lid = r.listing?.id || 'unknown';
+      if(!groups[lid]) groups[lid] = [];
+      groups[lid].push(r);
+    });
+    return Object.values(groups);
+  }, [filteredReports]);
 
   return (
     <div className="space-y-6">
@@ -1319,6 +1451,12 @@ const AdminDashboard = ({ user, onLogout }: { user: User, onLogout: () => void }
          >
            Listing Management
          </button>
+         <button 
+           onClick={() => setActiveTab('REPORTS')} 
+           className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'REPORTS' ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
+         >
+           Reports
+         </button>
       </div>
 
       {activeTab === 'OVERVIEW' && (
@@ -1327,7 +1465,7 @@ const AdminDashboard = ({ user, onLogout }: { user: User, onLogout: () => void }
                <StatCard icon={<Users className="text-blue-500" />} label="Total Users" value={allUsers.length.toString()} subtext="Platform Wide" />
                <StatCard icon={<Package className="text-emerald-500" />} label="Total Listings" value={allListings.length.toString()} subtext="Active & Hidden" />
                <StatCard icon={<ShieldAlert className="text-amber-500" />} label="Blocked Users" value={allUsers.filter(u => u.status === UserStatus.BLOCKED).length.toString()} subtext="Action Required" />
-               <StatCard icon={<FileCheck className="text-blue-500" />} label="Pending Verifications" value={allUsers.filter(u => u.verificationStatus === VerificationStatus.PENDING).length.toString()} subtext="Review Queue" />
+               <StatCard icon={<Flag className="text-red-500" />} label="Active Reports" value={allReports.length.toString()} subtext="Needs Review" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -1509,6 +1647,97 @@ const AdminDashboard = ({ user, onLogout }: { user: User, onLogout: () => void }
          </div>
       )}
 
+      {activeTab === 'REPORTS' && (
+         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+            <div className="p-4 border-b border-gray-100 flex gap-4 bg-gray-50">
+               <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                  <input 
+                     value={searchQuery}
+                     onChange={(e) => setSearchQuery(e.target.value)}
+                     className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
+                     placeholder="Search reports..."
+                  />
+               </div>
+               <button onClick={loadData} className="p-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 text-gray-600 transition-colors"><RefreshCcw size={16}/></button>
+            </div>
+            <div className="overflow-x-auto">
+               <table className="w-full text-left text-sm">
+                  <thead className="bg-gray-50 text-gray-500 font-bold uppercase text-xs">
+                     <tr>
+                        <th className="px-6 py-3">Reported Item</th>
+                        <th className="px-6 py-3">Count</th>
+                        <th className="px-6 py-3">Reasons</th>
+                        <th className="px-6 py-3">Latest Date</th>
+                        <th className="px-6 py-3 text-right">Actions</th>
+                     </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                     {groupedReports.map(group => {
+                        const first = group[0];
+                        const listing = allListings.find(l => l.id === first.listing?.id);
+                        const listingInfo = listing || first.listing;
+                        if (!listingInfo) return null;
+
+                        return (
+                           <tr 
+                              key={listingInfo.id} 
+                              className="hover:bg-gray-50 cursor-pointer"
+                              onClick={() => {
+                                 if(listing) {
+                                    setSelectedListing(listing);
+                                    setSelectedReports(group);
+                                 }
+                              }}
+                           >
+                              <td className="px-6 py-3">
+                                 <div className="flex items-center gap-3">
+                                    <img src={listingInfo.imageUrl} className="w-8 h-8 rounded bg-gray-200 object-cover" />
+                                    <div className="font-bold text-gray-900 truncate max-w-[150px]" title={listingInfo.title}>{listingInfo.title}</div>
+                                 </div>
+                              </td>
+                              <td className="px-6 py-3">
+                                 <span className="font-bold text-red-600 px-2 py-1 bg-red-50 rounded-lg">{group.length}</span>
+                              </td>
+                              <td className="px-6 py-3 text-gray-600">
+                                 <div className="text-xs space-y-1">
+                                    {group.slice(0, 2).map((r, i) => (
+                                       <div key={i} className="truncate max-w-[200px]">• {r.reason}</div>
+                                    ))}
+                                    {group.length > 2 && <div className="text-gray-400 italic">+{group.length - 2} more</div>}
+                                 </div>
+                              </td>
+                              <td className="px-6 py-3 text-gray-500">{new Date(group[group.length-1].timestamp).toLocaleDateString()}</td>
+                              <td className="px-6 py-3 text-right">
+                                 <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                                    <button 
+                                       onClick={() => handleToggleListingBlock(listingInfo.id)}
+                                       className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded transition-colors"
+                                    >
+                                       Block
+                                    </button>
+                                    <button 
+                                       onClick={() => handleDismissReports(group.map(r => r.id))}
+                                       className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded transition-colors"
+                                    >
+                                       Dismiss
+                                    </button>
+                                    <button 
+                                       className="px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-500 text-xs font-bold rounded transition-colors"
+                                    >
+                                       Cancel
+                                    </button>
+                                 </div>
+                              </td>
+                           </tr>
+                        );
+                     })}
+                  </tbody>
+               </table>
+            </div>
+         </div>
+      )}
+
       {selectedUser && (
          <AdminUserDetailModal 
             user={selectedUser} 
@@ -1523,9 +1752,33 @@ const AdminDashboard = ({ user, onLogout }: { user: User, onLogout: () => void }
       {selectedListing && (
          <AdminListingDetailModal 
             listing={selectedListing} 
-            onClose={() => setSelectedListing(null)} 
+            reports={selectedReports}
+            onClose={() => { setSelectedListing(null); setSelectedReports([]); }} 
             onToggleBlock={() => handleToggleListingBlock(selectedListing.id)}
             onDelete={() => handleDeleteListing(selectedListing.id)}
+            onDismissAll={() => handleDismissReports(selectedReports.map(r => r.id))}
+         />
+      )}
+
+      {reportsToDismiss.length > 0 && (
+         <ConfirmationModal 
+           title="Dismiss Reports" 
+           message={`Are you sure you want to dismiss ${reportsToDismiss.length} report${reportsToDismiss.length > 1 ? 's' : ''}? This action cannot be undone.`}
+           confirmText="Dismiss All"
+           onConfirm={confirmDismissReports}
+           onCancel={() => setReportsToDismiss([])}
+           isDanger={true}
+         />
+      )}
+
+      {deleteListingId && (
+         <ConfirmationModal 
+           title="Delete Listing" 
+           message="Are you sure you want to delete this listing?"
+           confirmText="Delete"
+           onConfirm={confirmDeleteListing}
+           onCancel={() => setDeleteListingId(null)}
+           isDanger={true}
          />
       )}
 

@@ -31,7 +31,7 @@ const toUser = (u: any): User => ({
   email: u.email,
   phone: u.phone || '',
   address: u.address || '',
-  avatarUrl: u.avatarUrl || '',
+  avatarUrl: (u.avatarUrl && !u.avatarUrl.startsWith('blob:')) ? u.avatarUrl : '',
   trustScore: u.trustScore ?? 0,
   vouchCount: u.vouchCount ?? 0,
   verificationStatus: u.verificationStatus,
@@ -50,8 +50,8 @@ const toListing = (l: any): Listing => ({
   description: l.description,
   type: l.type,
   category: l.category,
-  imageUrl: l.imageUrl,
-  gallery: l.gallery,
+  imageUrl: (l.imageUrl && !l.imageUrl.startsWith('blob:')) ? l.imageUrl : '',
+  gallery: (l.gallery || []).filter((g: string) => !g.startsWith('blob:')),
   distanceMiles: l.distanceMiles ?? 0,
   status: l.status,
   hourlyRate: l.hourlyRate,
@@ -62,7 +62,7 @@ const toListing = (l: any): Listing => ({
 });
 
 const toMessage = (m: any): Message => ({
-  id: String(m.id), senderId: String(m.senderId), receiverId: String(m.receiverId), content: m.content, imageUrl: m.imageUrl ? String(m.imageUrl) : undefined, timestamp: m.timestamp, isRead: !!m.isRead,
+  id: String(m.id), senderId: String(m.senderId), receiverId: String(m.receiverId), content: m.content, imageUrl: (m.imageUrl && !String(m.imageUrl).startsWith('blob:')) ? String(m.imageUrl) : undefined, timestamp: m.timestamp, isRead: !!m.isRead,
 });
 
 export const mockApi = {
@@ -138,6 +138,14 @@ export const mockApi = {
       method: 'POST',
       body: JSON.stringify({ token, newPassword })
     });
+  },
+
+  getReports: async (): Promise<any[]> => {
+    return authFetch('/api/admin/reports');
+  },
+
+  dismissReport: async (id: string): Promise<void> => {
+    await authFetch(`/api/admin/reports/${id}`, { method: 'DELETE' });
   },
 
   getCurrentUser: async (): Promise<User | null> => {
@@ -338,6 +346,11 @@ export const mockApi = {
 
   returnItem: async (listingId: string): Promise<boolean> => {
     await authFetch(`/api/listings/${listingId}/return`, { method: 'POST' });
+    return true;
+  },
+
+  reportListing: async (listingId: string, reason: string, details: string): Promise<boolean> => {
+    await authFetch(`/api/listings/${listingId}/report`, { method: 'POST', body: JSON.stringify({ reason, details }) });
     return true;
   },
 

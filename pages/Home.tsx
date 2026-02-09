@@ -14,6 +14,7 @@ export const Home: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<'ALL' | ListingType>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [locationQuery, setLocationQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [currentPage, setCurrentPage] = useState(1);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -83,6 +84,12 @@ export const Home: React.FC = () => {
         if (selectedCategory !== t('home.category_all')) {
           filtered = filtered.filter(l => l.category === selectedCategory);
         }
+
+        if (locationQuery) {
+          filtered = filtered.filter(l => 
+            l.owner?.address?.toLowerCase().includes(locationQuery.toLowerCase())
+          );
+        }
           
         setListings(filtered);
         setCurrentPage(1);
@@ -95,7 +102,7 @@ export const Home: React.FC = () => {
 
     const timer = setTimeout(fetchData, 300);
     return () => clearTimeout(timer);
-  }, [searchQuery, filterType, selectedCategory, t]);
+  }, [searchQuery, locationQuery, filterType, selectedCategory, t]);
 
   const totalPages = Math.ceil(listings.length / ITEMS_PER_PAGE);
   const paginatedListings = listings.slice(
@@ -132,17 +139,39 @@ export const Home: React.FC = () => {
              </p>
              
              {/* Search Bar Embedded in Hero */}
-             <div className="bg-white p-2 rounded-full shadow-lg max-w-md w-full flex items-center transition-transform focus-within:scale-105 duration-300">
-                <div className="pl-4 text-gray-400">
-                  <Search size={20} />
+             <div className="bg-white p-2 rounded-full shadow-lg max-w-3xl w-full flex items-center transition-transform focus-within:scale-105 duration-300">
+                <div className="flex-[1.5] flex items-center border-r border-gray-200">
+                  <div className="pl-4 text-gray-400">
+                    <Search size={20} />
+                  </div>
+                  <input 
+                    type="text" 
+                    placeholder={t('home.search_placeholder')}
+                    className="w-full px-4 py-2.5 text-gray-800 placeholder-gray-400 bg-transparent focus:outline-none"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
                 </div>
-                <input 
-                  type="text" 
-                  placeholder={t('home.search_placeholder')}
-                  className="w-full px-4 py-2.5 text-gray-800 placeholder-gray-400 bg-transparent focus:outline-none"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+
+                <div className="flex-1 flex items-center px-2">
+                   <div className="pl-2 text-gray-400">
+                     <MapPin size={20} />
+                   </div>
+                   <input 
+                     type="text" 
+                     placeholder="City, Zip..."
+                     className="w-full px-4 py-2.5 text-gray-800 placeholder-gray-400 bg-transparent focus:outline-none"
+                     value={locationQuery}
+                     onChange={(e) => setLocationQuery(e.target.value)}
+                   />
+                </div>
+
+                <button 
+                  className="bg-brand-600 hover:bg-brand-700 text-white px-8 py-3 rounded-full font-bold shadow-md transition-colors"
+                  onClick={() => {}}
+                >
+                  Search
+                </button>
              </div>
            </div>
            

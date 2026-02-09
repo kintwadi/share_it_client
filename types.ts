@@ -100,3 +100,24 @@ export interface Message {
   timestamp: string;
   isRead: boolean;
 }
+
+export interface Report {
+  id: string;
+  reason: string;
+  details: string;
+  timestamp: string;
+  reporter?: {
+    id: string;
+    name: string;
+    avatarUrl: string;
+    trustScore: number;
+  };
+  listing?: {
+    id: string;
+    title: string;
+    imageUrl: string;
+    status: AvailabilityStatus;
+    ownerId: string;
+  };
+}
+
