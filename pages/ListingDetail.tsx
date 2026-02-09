@@ -39,6 +39,14 @@ export const ListingDetail: React.FC = () => {
   const [vouching, setVouching] = useState(false);
   const [hasVouched, setHasVouched] = useState(false);
 
+  // Report Modal State
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportDetails, setReportDetails] = useState('');
+  const [reporting, setReporting] = useState(false);
+  const [showReportSuccess, setShowReportSuccess] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+
   useEffect(() => {
     const loadData = async () => {
       if (!id) return;
@@ -71,6 +79,26 @@ export const ListingDetail: React.FC = () => {
     loadData();
     initStripe();
   }, [id]);
+
+  const handleReport = async () => {
+    if (!listing) return;
+    setReporting(true);
+    try {
+      await mockApi.reportListing(listing.id, reportReason, reportDetails);
+      setShowReportModal(false);
+      setReportReason('');
+      setReportDetails('');
+      setShowReportSuccess(true);
+    } catch (e: any) {
+      if (e.message && e.message.includes("already_reported_for_reason")) {
+        setReportError('You have already reported this listing for this reason.');
+      } else {
+        setReportError('Failed to report listing. Please try again.');
+      }
+    } finally {
+      setReporting(false);
+    }
+  };
 
   const handleStripeSuccess = async (paymentIntentId: string) => {
       // Call borrowItem with STRIPE and paymentIntentId
@@ -425,15 +453,24 @@ export const ListingDetail: React.FC = () => {
             >
                <div className="flex items-center gap-3">
                  <div className="relative">
-                   <img src={listing.owner?.avatarUrl} alt={listing.owner?.name} className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm" />
+                   <img 
+                     src={listing.owner?.avatarUrl || `https://picsum.photos/seed/${listing.owner?.id}/200/200`} 
+                     alt={listing.owner?.name} 
+                     onError={(e) => { (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${listing.owner?.id}/200/200`; }}
+                     className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm" 
+                   />
                    <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5">
                      <BadgeCheck size={14} className="text-blue-500" />
                    </div>
                  </div>
                  <div>
-                   <div className="text-sm font-bold text-gray-900 group-hover:text-brand-600 transition-colors">{listing.owner?.name}</div>
-                   <div className="text-xs text-gray-500">Joined {new Date(listing.owner?.joinedDate || '').getFullYear()}</div>
-                 </div>
+                  <div className="text-sm font-bold text-gray-900 group-hover:text-brand-600 transition-colors">{listing.owner?.name}</div>
+                  <div className="text-xs text-gray-500">
+                    Joined {listing.owner?.joinedDate && !isNaN(new Date(listing.owner.joinedDate).getTime()) 
+                      ? new Date(listing.owner.joinedDate).getFullYear() 
+                      : new Date().getFullYear()}
+                  </div>
+                </div>
                </div>
                <div className="text-right">
                   <div className="flex items-center text-emerald-600 font-bold text-sm justify-end">
@@ -554,7 +591,10 @@ export const ListingDetail: React.FC = () => {
              )}
              
              <div className="mt-6 flex justify-center">
-               <button className="flex items-center text-xs text-gray-400 hover:text-gray-600 transition-colors">
+               <button 
+                 onClick={() => setShowReportModal(true)}
+                 className="flex items-center text-xs text-gray-400 hover:text-gray-600 transition-colors"
+               >
                  <Flag size={12} className="mr-1" />
                  Report this listing
                </button>
@@ -780,6 +820,202 @@ export const ListingDetail: React.FC = () => {
            </div>
         </div>
       )}
+
+      {/* Profile & Reviews Modal */}
+      {showProfileModal && listing.owner && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
+           <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-fade-in-down max-h-[85vh] flex flex-col">
+              <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                 <h3 className="font-bold text-gray-900 text-lg">Member Profile</h3>
+                 <button 
+                   onClick={() => setShowProfileModal(false)} 
+                   className="text-gray-400 hover:text-gray-600 p-1 bg-white rounded-full border border-gray-200"
+                 >
+                    <X size={20} />
+                 </button>
+              </div>
+              
+              <div className="p-6 overflow-y-auto">
+                 <div className="flex items-center gap-4 mb-6">
+                    <img 
+                       src={listing.owner.avatarUrl || `https://picsum.photos/seed/${listing.owner.id}/200/200`} 
+                       onError={(e) => { (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${listing.owner.id}/200/200`; }}
+                       className="w-20 h-20 rounded-full object-cover border-4 border-gray-50 shadow-sm" 
+                    />
+                    <div>
+                       <h4 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                          {listing.owner.name}
+                          {listing.owner.verificationStatus === 'VERIFIED' && <BadgeCheck size={20} className="text-blue-500" />}
+                       </h4>
+                       <p className="text-sm text-gray-500">
+                          Joined {listing.owner.joinedDate && !isNaN(new Date(listing.owner.joinedDate).getTime()) 
+                             ? new Date(listing.owner.joinedDate).getFullYear() 
+                             : new Date().getFullYear()}
+                       </p>
+                       <div className="flex items-center gap-3 mt-2">
+                          <span className="flex items-center text-sm font-bold text-gray-700 bg-gray-100 px-2 py-1 rounded-lg">
+                             <ShieldCheck size={14} className="mr-1 text-emerald-600" />
+                             {listing.owner.trustScore}% Trust
+                          </span>
+                          <span className="flex items-center text-sm font-bold text-gray-700 bg-gray-100 px-2 py-1 rounded-lg">
+                             <ThumbsUp size={14} className="mr-1 text-brand-600" />
+                             {listing.owner.vouchCount} Vouches
+                          </span>
+                       </div>
+                    </div>
+                 </div>
+
+                 {!isOwner && currentUser && (
+                    <button 
+                       onClick={handleVouch}
+                       disabled={vouching || hasVouched}
+                       className="w-full py-3 mb-8 bg-brand-50 hover:bg-brand-100 text-brand-700 rounded-xl font-bold transition-colors flex items-center justify-center border border-brand-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                       {vouching ? <Loader2 className="animate-spin" /> : (hasVouched ? 'Vouched!' : 'Vouch for this User')}
+                    </button>
+                 )}
+
+                 <h4 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <Star size={18} className="text-yellow-400 fill-current" />
+                    Reviews ({reviews.length})
+                 </h4>
+                 
+                 {loadingReviews ? (
+                    <div className="flex justify-center py-8"><Loader2 className="animate-spin text-gray-400" /></div>
+                 ) : reviews.length > 0 ? (
+                    <div className="space-y-4">
+                       {reviews.map((review) => (
+                          <div key={review.id} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                             <div className="flex justify-between items-start mb-2">
+                                <div className="flex items-center gap-1 text-yellow-500">
+                                   {[...Array(5)].map((_, i) => (
+                                      <Star key={i} size={12} fill={i < review.rating ? "currentColor" : "none"} className={i < review.rating ? "" : "text-gray-300"} />
+                                   ))}
+                                </div>
+                                <span className="text-xs text-gray-400">{new Date(review.timestamp).toLocaleDateString()}</span>
+                             </div>
+                             <p className="text-gray-700 text-sm italic">"{review.comment}"</p>
+                          </div>
+                       ))}
+                    </div>
+                 ) : (
+                    <div className="text-center py-8 text-gray-500 text-sm bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                       No reviews yet.
+                    </div>
+                 )}
+              </div>
+           </div>
+        </div>
+      )}
+      {/* Report Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
+           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-fade-in-down">
+              <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                 <h3 className="font-bold text-gray-900 text-lg flex items-center gap-2">
+                    <Flag size={20} className="text-red-500" />
+                    Report Listing
+                 </h3>
+                 <button 
+                   onClick={() => setShowReportModal(false)} 
+                   className="text-gray-400 hover:text-gray-600 p-1 bg-white rounded-full border border-gray-200"
+                 >
+                    <X size={20} />
+                 </button>
+              </div>
+              
+              <div className="p-6">
+                 <p className="text-sm text-gray-500 mb-4">
+                    Please provide details about why you are reporting this listing. Our team will review your report.
+                 </p>
+                 
+                 <div className="mb-4">
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Reason</label>
+                    <select 
+                      value={reportReason}
+                      onChange={(e) => setReportReason(e.target.value)}
+                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+                    >
+                       <option value="">Select a reason</option>
+                       <option value="inappropriate">Inappropriate Content</option>
+                       <option value="scam">Scam / Fraud</option>
+                       <option value="misleading">Misleading Information</option>
+                       <option value="other">Other</option>
+                    </select>
+                 </div>
+                 
+                 <div className="mb-6">
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Additional Details</label>
+                    <textarea 
+                      value={reportDetails}
+                      onChange={(e) => setReportDetails(e.target.value)}
+                      placeholder="Please describe the issue..."
+                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all min-h-[100px]"
+                    />
+                 </div>
+                 
+                 <div className="flex gap-3">
+                    <button 
+                      onClick={() => setShowReportModal(false)}
+                      className="flex-1 py-3 text-gray-600 font-bold hover:bg-gray-50 rounded-xl transition-colors"
+                    >
+                       Cancel
+                    </button>
+                    <button 
+                      onClick={handleReport}
+                      disabled={!reportReason || reporting}
+                      className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold shadow-lg shadow-red-200 transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                       {reporting ? <Loader2 className="animate-spin" /> : 'Submit Report'}
+                    </button>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* Report Success Modal */}
+      {showReportSuccess && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
+           <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden animate-fade-in-down text-center p-8">
+              <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 size={32} />
+              </div>
+              <h3 className="font-bold text-gray-900 text-xl mb-2">Report Submitted</h3>
+              <p className="text-gray-500 mb-6">
+                 Thank you for helping keep our community safe. Our team will review your report shortly.
+              </p>
+              <button 
+                onClick={() => setShowReportSuccess(false)}
+                className="w-full py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-bold transition-colors"
+              >
+                 Close
+              </button>
+           </div>
+        </div>
+      )}
+
+      {/* Report Error Modal */}
+      {reportError && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
+           <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden animate-fade-in-down text-center p-8">
+              <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle size={32} />
+              </div>
+              <h3 className="font-bold text-gray-900 text-xl mb-2">Report Failed</h3>
+              <p className="text-gray-500 mb-6">
+                 {reportError}
+              </p>
+              <button 
+                onClick={() => setReportError(null)}
+                className="w-full py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-bold transition-colors"
+              >
+                 Close
+              </button>
+           </div>
+        </div>
+      )}
+
     </div>
   );
 };
