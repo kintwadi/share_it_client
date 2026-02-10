@@ -772,7 +772,7 @@ const AdminUserDetailModal = ({ user, onClose, onToggleStatus, onDelete, onAppro
   );
 };
 
-const AdminListingDetailModal = ({ listing, reports = [], onClose, onToggleBlock, onDelete, onDismissAll }: { listing: Listing, reports?: Report[], onClose: () => void, onToggleBlock: () => void, onDelete: () => void, onDismissAll?: () => void }) => {
+const AdminListingDetailModal = ({ listing, reports = [], onClose, onToggleBlock, onDelete, onDismissAll, onDismissReport }: { listing: Listing, reports?: Report[], onClose: () => void, onToggleBlock: () => void, onDelete: () => void, onDismissAll?: () => void, onDismissReport?: (id: string) => void }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
        <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -812,7 +812,7 @@ const AdminListingDetailModal = ({ listing, reports = [], onClose, onToggleBlock
                     
                     <div className="space-y-2">
                         {reports.map((report, idx) => (
-                            <div key={idx} className="p-4 bg-red-50 border border-red-100 rounded-xl">
+                            <div key={idx} className="p-4 bg-red-50 border border-red-100 rounded-xl relative group">
                                 <div className="flex items-start gap-3">
                                     <div className="flex-1">
                                         <h4 className="font-bold text-red-900 text-sm mb-1">{report.reason}</h4>
@@ -823,6 +823,15 @@ const AdminListingDetailModal = ({ listing, reports = [], onClose, onToggleBlock
                                             <span>{new Date(report.timestamp).toLocaleDateString()}</span>
                                         </div>
                                     </div>
+                                    {onDismissReport && (
+                                        <button
+                                            onClick={() => onDismissReport(report.id)}
+                                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-red-100 text-red-500 rounded-lg"
+                                            title="Dismiss this report"
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -862,23 +871,45 @@ const AdminListingDetailModal = ({ listing, reports = [], onClose, onToggleBlock
              </div>
           </div>
 
-          <div className="p-6 border-t border-gray-100 bg-gray-50 flex gap-3 shrink-0">
-             <button 
-                onClick={onToggleBlock}
-                className={`flex-1 py-3 rounded-xl font-bold text-sm transition-colors border flex items-center justify-center gap-2 shadow-sm ${
-                   listing.status !== AvailabilityStatus.BLOCKED
-                   ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' 
-                   : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                }`}
-             >
-                {listing.status !== AvailabilityStatus.BLOCKED ? <><Ban size={16}/> Block Listing</> : <><CheckCircle2 size={16}/> Unblock</>}
-             </button>
-             <button 
-                onClick={onDelete}
-                className="flex-1 py-3 bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 rounded-xl font-bold text-sm transition-colors shadow-sm"
-             >
-                Delete
-             </button>
+          <div className="p-6 border-t border-gray-100 bg-gray-50 flex flex-col gap-3 shrink-0">
+             <div className="flex gap-3">
+                 <button 
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onClose(); }}
+                    className="flex-1 py-3 bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 rounded-xl font-bold text-sm transition-colors shadow-sm"
+                 >
+                    Cancel
+                 </button>
+                 {onDismissAll && reports && reports.length > 0 && (
+                    <button 
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onDismissAll(); }}
+                        className="flex-1 py-3 bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 rounded-xl font-bold text-sm transition-colors shadow-sm"
+                    >
+                        Dismiss Reports
+                    </button>
+                 )}
+             </div>
+             <div className="flex gap-3">
+                 <button 
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onToggleBlock(); }}
+                    className={`flex-1 py-3 rounded-xl font-bold text-sm transition-colors border flex items-center justify-center gap-2 shadow-sm ${
+                       listing.status !== AvailabilityStatus.BLOCKED
+                       ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' 
+                       : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                    }`}
+                 >
+                    {listing.status !== AvailabilityStatus.BLOCKED ? <><Ban size={16}/> Block Listing</> : <><CheckCircle2 size={16}/> Unblock</>}
+                 </button>
+                 <button 
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                    className="flex-1 py-3 bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 rounded-xl font-bold text-sm transition-colors shadow-sm"
+                 >
+                    Delete Listing
+                 </button>
+             </div>
           </div>
        </div>
     </div>
@@ -1351,24 +1382,36 @@ const AdminDashboard = ({ user, onLogout }: { user: User, onLogout: () => void }
   };
 
   const handleToggleUserStatus = async (userId: string, currentStatus: UserStatus) => {
-     const newStatus = currentStatus === UserStatus.ACTIVE ? UserStatus.BLOCKED : UserStatus.ACTIVE;
-     await mockApi.updateUserStatus(userId, newStatus);
-     setSelectedUser(null); // Close modal
-     loadData();
+     try {
+       const newStatus = currentStatus === UserStatus.ACTIVE ? UserStatus.BLOCKED : UserStatus.ACTIVE;
+       await mockApi.updateUserStatus(userId, newStatus);
+       setSelectedUser(null); // Close modal
+       loadData();
+     } catch (e: any) {
+       alert('Failed to toggle user status: ' + (e.message || 'Unknown error'));
+     }
   };
 
   const handleDeleteUser = async (userId: string) => {
      if(confirm('Are you sure you want to delete this user and all their data?')) {
-        await mockApi.deleteAccount(userId);
-        setSelectedUser(null);
-        loadData();
+        try {
+          await mockApi.deleteAccount(userId);
+          setSelectedUser(null);
+          loadData();
+        } catch (e: any) {
+          alert('Failed to delete user: ' + (e.message || 'Unknown error'));
+        }
      }
   };
 
   const handleToggleListingBlock = async (listingId: string) => {
-     await mockApi.toggleListingBlock(listingId);
-     setSelectedListing(null); // Close modal
-     loadData();
+     try {
+       await mockApi.toggleListingBlock(listingId);
+       setSelectedListing(null); // Close modal
+       loadData();
+     } catch (e: any) {
+       alert('Failed to toggle block status: ' + (e.message || 'Unknown error'));
+     }
   };
 
   const handleDeleteListing = (listingId: string) => {
@@ -1377,24 +1420,36 @@ const AdminDashboard = ({ user, onLogout }: { user: User, onLogout: () => void }
 
   const confirmDeleteListing = async () => {
       if (deleteListingId) {
-        await mockApi.deleteListing(deleteListingId);
-        setDeleteListingId(null);
-        setSelectedListing(null);
-        loadData();
+        try {
+          await mockApi.deleteListing(deleteListingId);
+          setDeleteListingId(null);
+          setSelectedListing(null);
+          loadData();
+        } catch (e: any) {
+          alert('Failed to delete listing: ' + (e.message || 'Unknown error'));
+        }
       }
   };
 
   const handleApproveVerification = async (userId: string) => {
-      await mockApi.approveVerification(userId);
-      setSelectedUser(null);
-      loadData();
+      try {
+        await mockApi.approveVerification(userId);
+        setSelectedUser(null);
+        loadData();
+      } catch (e: any) {
+        alert('Failed to approve verification: ' + (e.message || 'Unknown error'));
+      }
   };
 
   const handleRevokeVerification = async (userId: string) => {
       if(confirm('Are you sure you want to revoke verification for this user?')) {
-          await mockApi.revokeVerification(userId);
-          setSelectedUser(null);
-          loadData();
+          try {
+            await mockApi.revokeVerification(userId);
+            setSelectedUser(null);
+            loadData();
+          } catch (e: any) {
+            alert('Failed to revoke verification: ' + (e.message || 'Unknown error'));
+          }
       }
   };
 
@@ -1404,13 +1459,17 @@ const AdminDashboard = ({ user, onLogout }: { user: User, onLogout: () => void }
 
   const confirmDismissReports = async () => {
       if (reportsToDismiss.length > 0) {
-          await Promise.all(reportsToDismiss.map(id => mockApi.dismissReport(id)));
-          setReportsToDismiss([]);
-          if (selectedReports.length > 0) {
-             setSelectedListing(null);
-             setSelectedReports([]);
+          try {
+            await Promise.all(reportsToDismiss.map(id => mockApi.dismissReport(id)));
+            setReportsToDismiss([]);
+            if (selectedReports.length > 0) {
+               setSelectedListing(null);
+               setSelectedReports([]);
+            }
+            loadData();
+          } catch (e: any) {
+            alert('Failed to dismiss reports: ' + (e.message || 'Unknown error'));
           }
-          loadData();
       }
   };
 
@@ -1711,21 +1770,18 @@ const AdminDashboard = ({ user, onLogout }: { user: User, onLogout: () => void }
                               <td className="px-6 py-3 text-right">
                                  <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                                     <button 
+                                       type="button"
                                        onClick={() => handleToggleListingBlock(listingInfo.id)}
                                        className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded transition-colors"
                                     >
                                        Block
                                     </button>
                                     <button 
+                                       type="button"
                                        onClick={() => handleDismissReports(group.map(r => r.id))}
                                        className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded transition-colors"
                                     >
                                        Dismiss
-                                    </button>
-                                    <button 
-                                       className="px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-500 text-xs font-bold rounded transition-colors"
-                                    >
-                                       Cancel
                                     </button>
                                  </div>
                               </td>
@@ -1757,6 +1813,7 @@ const AdminDashboard = ({ user, onLogout }: { user: User, onLogout: () => void }
             onToggleBlock={() => handleToggleListingBlock(selectedListing.id)}
             onDelete={() => handleDeleteListing(selectedListing.id)}
             onDismissAll={() => handleDismissReports(selectedReports.map(r => r.id))}
+            onDismissReport={(id) => handleDismissReports([id])}
          />
       )}
 

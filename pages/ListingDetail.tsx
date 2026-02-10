@@ -6,7 +6,8 @@ import { Elements } from '@stripe/react-stripe-js';
 import { Listing, User, ListingType, AvailabilityStatus, Review } from '../types';
 import { mockApi } from '../services/mockApi';
 import { CheckoutForm } from '../components/CheckoutForm';
-import { MapPin, ShieldCheck, ArrowLeft, MessageCircle, Calendar, CheckCircle2, AlertCircle, Loader2, Share2, BadgeCheck, Flag, DollarSign, Gift, ChevronLeft, ChevronRight, Star, X, Minus, Plus, Clock, CreditCard, Wallet, AlertTriangle, BellRing, Check, X as XIcon, Zap, ThumbsUp } from 'lucide-react';
+import { ConfirmationModal } from '../components/ConfirmationModal';
+import { MapPin, ShieldCheck, ArrowLeft, MessageCircle, Calendar, CheckCircle2, AlertCircle, Loader2, Share2, BadgeCheck, Flag, DollarSign, Gift, ChevronLeft, ChevronRight, Star, X, Minus, Plus, Clock, CreditCard, Wallet, AlertTriangle, BellRing, Check, X as XIcon, Zap, ThumbsUp, Trash2 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export const ListingDetail: React.FC = () => {
@@ -46,6 +47,10 @@ export const ListingDetail: React.FC = () => {
   const [reporting, setReporting] = useState(false);
   const [showReportSuccess, setShowReportSuccess] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
+
+  // Delete Modal State
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -255,6 +260,19 @@ export const ListingDetail: React.FC = () => {
      } finally {
        setLoadingReviews(false);
      }
+  };
+
+  const handleDeleteListing = async () => {
+    if (!listing) return;
+    setIsDeleting(true);
+    try {
+      await mockApi.deleteListing(listing.id);
+      navigate('/');
+    } catch (e) {
+      alert('Failed to delete listing');
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+    }
   };
 
   const handleVouch = async () => {
@@ -547,8 +565,17 @@ export const ListingDetail: React.FC = () => {
                           </div>
                        </div>
                     ) : (
-                      <div className="w-full py-4 bg-gray-100 text-gray-500 rounded-xl font-bold text-center border-2 border-dashed border-gray-200">
-                        You own this listing
+                      <div className="space-y-3">
+                        <div className="w-full py-4 bg-gray-100 text-gray-500 rounded-xl font-bold text-center border-2 border-dashed border-gray-200">
+                          You own this listing
+                        </div>
+                        <button 
+                           onClick={() => setShowDeleteModal(true)}
+                           className="w-full py-3 bg-white border border-red-200 text-red-600 hover:bg-red-50 rounded-xl font-bold transition-all flex items-center justify-center"
+                        >
+                           <Trash2 className="mr-2" size={20} />
+                           Delete Listing
+                        </button>
                       </div>
                     )
                  ) : (

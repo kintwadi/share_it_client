@@ -36,7 +36,7 @@ const toUser = (u: any): User => ({
   vouchCount: u.vouchCount ?? 0,
   verificationStatus: u.verificationStatus,
   location: { lat: u.location?.x ?? 0, lng: u.location?.y ?? 0 },
-  joinedDate: u.joinedDate || '',
+  joinedDate: u.joinedDate || new Date().toISOString(),
   role: u.role,
   status: u.status || UserStatus.ACTIVE,
   twoFactorEnabled: !!u.twoFactorEnabled,
