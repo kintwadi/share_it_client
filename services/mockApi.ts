@@ -2,7 +2,8 @@
 import { MOCK_USERS } from '../data/mockData';
 import { Listing, User, Message, AvailabilityStatus, BorrowHistoryItem, Review, UserStatus, VerificationStatus } from '../types';
 
-export const API_BASE = (window as any).__API_BASE__ || 'http://localhost:8081';
+declare const __API_BASE__: string;
+export const API_BASE = __API_BASE__;
 const STORAGE_USER_ID = 'nearshare_current_user_id';
 const TOKEN_KEY = 'nearshare_token';
 
