@@ -31,6 +31,19 @@ export const Connect: React.FC<ConnectProps> = ({ onLogin }) => {
     mockApi.getPublicConfig().then(cfg => setAllowAdminToggle(!!cfg.allowAdminToggle)).catch(() => setAllowAdminToggle(false));
   }, []);
 
+  const handleSeedData = async () => {
+    setIsLoading(true);
+    try {
+      const res = await mockApi.seedData();
+      alert(res);
+    } catch (e) {
+      console.error(e);
+      alert('Failed to seed data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleDemoLogin = async (userId: string) => {
     setIsLoading(true);
     try {
@@ -274,6 +287,17 @@ export const Connect: React.FC<ConnectProps> = ({ onLogin }) => {
               <DemoButton label="Borrower" role="New User" color="text-amber-600 bg-amber-50 hover:bg-amber-100" onClick={() => handleDemoLogin('user_borrower')} />
               <DemoButton label="Admin" role="Staff" color="text-purple-600 bg-purple-50 hover:bg-purple-100" onClick={() => handleDemoLogin('user_admin')} />
               <DemoButton label="Unverified" role="Demo" color="text-slate-600 bg-slate-50 hover:bg-slate-100" onClick={() => handleDemoLogin('user_unverified_demo')} />
+            </div>
+            <div className="mt-4 flex justify-center">
+               <button 
+                  type="button"
+                  onClick={handleSeedData}
+                  disabled={isLoading}
+                  className="text-xs font-medium text-gray-400 hover:text-brand-600 transition-colors flex items-center gap-1"
+               >
+                  <Sparkles size={12} />
+                  Load Seed Data
+               </button>
             </div>
           </div>
         </div>

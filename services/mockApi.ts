@@ -425,6 +425,10 @@ export const mockApi = {
         method: 'POST', 
         body: JSON.stringify({ amount, currency, listingId, durationHours }) 
     });
+  },
+
+  seedData: async (): Promise<string> => {
+      return authFetch('/api/seed');
   }
 };
 
