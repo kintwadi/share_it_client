@@ -36,9 +36,9 @@ export const Connect: React.FC<ConnectProps> = ({ onLogin }) => {
     try {
       const res = await mockApi.seedData();
       alert(res);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert('Failed to seed data');
+      alert(e.message || 'Failed to seed data');
     } finally {
       setIsLoading(false);
     }
