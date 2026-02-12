@@ -183,22 +183,6 @@ export const mockApi = {
     return toUser(data);
   },
 
-  // User requests verification
-  getPublicConfig: async () => {
-    return authFetch('/api/config/public');
-  },
-
-  addPaymentMethod: async (paymentMethodId: string) => {
-    return authFetch('/api/payment/methods', {
-      method: 'POST',
-      body: JSON.stringify({ paymentMethodId })
-    });
-  },
-
-  getPaymentMethods: async () => {
-    return authFetch('/api/payment/methods');
-  },
-
   requestVerification: async (data: { address: string, phone: string }): Promise<User> => {
     const resp = await authFetch('/api/users/verification-request', { method: 'POST', body: JSON.stringify(data) });
     return toUser(resp);
